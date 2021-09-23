@@ -38,16 +38,15 @@ func csvReader() {
 			break
 		}
 		if err != nil {
-			log.Fatal("error=", err)
-		}
-
-		if i > 2 {
-			new_reading, _ := strconv.Atoi(record[2])
-			usage := new_reading - reading
-			fmt.Println("usage =", usage)
+			log.Fatal(err)
 		}
 
 		if i != 1 {
+			if i > 2 {
+				new_reading, _ := strconv.Atoi(record[2])
+				usage := new_reading - reading
+				fmt.Println("usage =", usage)
+			}
 			metering_point_id, _ = strconv.Atoi(record[0])
 			reading_type, _ = strconv.Atoi(record[1])
 			reading, _ = strconv.Atoi(record[2])
