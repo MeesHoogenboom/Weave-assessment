@@ -6,16 +6,15 @@ import (
 	"io"
 	"log"
 	"os"
-	"reflect"
 	"strconv"
 )
 
-type energyData struct {
-	metering_point_id string
-	reading_type      string
-	reading           string
-	created_at        string
-}
+// type energyData struct {
+// 	metering_point_id string
+// 	reading_type      string
+// 	reading           string
+// 	created_at        string
+// }
 
 var i int
 
@@ -29,7 +28,7 @@ func csvReader() {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println("Succesfully opened CSV file!")
+		fmt.Println("Successfully opened CSV file")
 	}
 	//closes file after use
 	defer csvFile.Close()
@@ -51,22 +50,21 @@ func csvReader() {
 		if err != nil {
 			log.Fatal("error=", err)
 		}
+		if i != 1 {
+			// data := energyData{
+			// 	metering_point_id: record[0], //string
+			// 	reading_type:      record[1],
+			// 	reading:           record[2],
+			// 	created_at:        record[3],
+			// }
 
-		data := energyData{
-			metering_point_id: record[0],
-			reading_type:      record[1],
-			reading:           record[2],
-			created_at:        record[3],
+			metering_point_id, _ := strconv.Atoi(record[0])
+			reading_type, _ := strconv.Atoi(record[1])
+			reading, _ := strconv.Atoi(record[2])
+			created_at, _ := strconv.Atoi(record[3])
+
+			fmt.Println(metering_point_id, reading_type, reading, created_at)
 		}
 
-		fmt.Println("data:", record[0], record[1], record[2], record[3])
-
-		fmt.Println(reflect.TypeOf(data.reading))
-		reading, err := strconv.ParseInt(data.reading, 10, 64)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println(reading)
-		fmt.Println(reflect.TypeOf(reading))
 	}
 }
