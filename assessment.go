@@ -10,7 +10,6 @@ import (
 	"time"
 )
 
-var i int
 var meteringPointId int
 var readingType int
 var reading int
@@ -35,6 +34,8 @@ func csvReader() {
 
 	//initializes reader
 	r := csv.NewReader(csvFile)
+
+	var i int
 
 	for {
 		//basic counter
@@ -76,13 +77,12 @@ func csvReader() {
 				newReadingType, _ := strconv.Atoi(record[1])
 
 				if newReadingType == 1 {
-					electricity_2 := newReading
+					electricity_2 = newReading
 					totalCost += electricityCost(electricity_2, electricity_1, createdAt)
 				} else if newReadingType == 2 {
 					gas_2 = newReading
 					totalCost += gasCost(gas_2, gas_1, createdAt)
 				}
-				fmt.Println("Total cost =", totalCost)
 
 			}
 
@@ -102,8 +102,6 @@ func electricityCost(newReading int, oldReading int, createdAt int64) float64 {
 
 	usage := float64(newReading - oldReading)
 	kWh := usage / 1000
-
-	fmt.Println("Electricity usage =", usage, "kWh =", kWh)
 
 	//if usage is more than 100 or less than 0, returns basic cost value (0) and skips the reading
 	if usage <= 100 && usage >= 0 {
@@ -126,8 +124,6 @@ func gasCost(newReading int, oldReading int, createdAt int64) float64 {
 	usage := float64(newReading - oldReading)
 	kWh := usage * 9.769
 
-	fmt.Println("Gas usage =", usage, "kWh =", kWh)
-
 	if usage <= 100 && usage >= 0 {
 		cost = kWh * 0.06
 	}
@@ -140,9 +136,7 @@ func weekday(createdAt int64) bool {
 	var isWeekday bool
 	day := int(time.Unix(createdAt, 0).Weekday())
 
-	if day != 0 || day != 6 {
-		isWeekday = true
-	} else {
+	if day == 0 || day == 6 {
 		isWeekday = false
 	}
 	return isWeekday
