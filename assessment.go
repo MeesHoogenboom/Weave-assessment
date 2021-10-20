@@ -15,7 +15,8 @@ var meteringPointId, newMeteringPointId int
 var readingType, newReadingType int
 var reading, newReading int
 var createdAt int64
-var totalCost, cost float64
+var totalCost, price float64
+var readingSkipped bool
 
 var electricity_1, electricity_2 int
 var gas_1, gas_2 int
@@ -79,12 +80,12 @@ func csvReader() {
 
 				if newReadingType == 1 {
 					electricity_2 = newReading
-					cost, readingSkipped = cost(electricity_2, electricity_1, createdAt, newReadingType)
-					totalCost += cost
+					price, readingSkipped = cost(electricity_2, electricity_1, createdAt, newReadingType)
+					totalCost += price
 				} else if newReadingType == 2 {
 					gas_2 = newReading
-					cost, readingSkipped = cost(gas_2, gas_1, createdAt, newReadingType)
-					totalCost += cost
+					price, readingSkipped = cost(gas_2, gas_1, createdAt, newReadingType)
+					totalCost += price
 				}
 
 			}
@@ -100,22 +101,22 @@ func csvReader() {
 }
 
 //returns cost of electricity based on two readings and the time of the (week)day
-func electricityCost(usage int, createdAt int64) float64 {
+func electricityCost(usage float64, createdAt int64) float64 {
 	var cost float64
 
 	kWh := usage / 1000
 
-		//checks which tarif needs to be used
-		if weekday(createdAt) && rate(createdAt) {
-			cost = kWh * 0.20
-		} else {
-			cost = kWh * 0.18
-		}
+	//checks which tarif needs to be used
+	if weekday(createdAt) && rate(createdAt) {
+		cost = kWh * 0.20
+	} else {
+		cost = kWh * 0.18
+	}
 
 	return cost
 }
 
-func gasCost(usage int) float64 {
+func gasCost(usage float64) float64 {
 	var cost float64
 
 	kWh := usage * 9.769
@@ -124,36 +125,35 @@ func gasCost(usage int) float64 {
 	return cost
 }
 
-func cost(newReading int, oldReading int, createdAt int64, readingType, int) float64, bool {
-	var cost float64
+func cost(newReading int, oldReading int, createdAt int64, readingType int) (float64, bool) {
 	var readingSkipped bool
+	var price float64
 	usage := float64(newReading - oldReading)
-	
-	
-	if usage <= 100 && usage >= 0 && readingSkipped == false {
+
+	if usage <= 100 && usage >= 0 && !readingSkipped {
 		if readingType == 1 {
 
-			cost = electricityCost(usage, createdAt)
+			price = electricityCost(usage, createdAt)
 
 		} else if readingType == 2 {
 
-			cost = gasCost(usage)
+			price = gasCost(usage)
 
 		}
 	} else if readingSkipped && usage >= 0 {
 		if readingType == 1 {
 
-			cost = electricityCost(usage, createdAt)
+			price = electricityCost(usage, createdAt)
 
 		} else if readingType == 2 {
-			
-			cost = gasCost(usage)
+
+			price = gasCost(usage)
 		}
-	} else readingSkipped == true
-
-	return cost readingSkipped		
+	} else {
+		readingSkipped = true
+	}
+	return price, readingSkipped
 }
-
 
 //returns true if Unix timestamp is a weekday (mo, tu, we, th, fr)
 func weekday(createdAt int64) bool {
