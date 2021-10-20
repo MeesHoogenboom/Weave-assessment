@@ -10,11 +10,12 @@ import (
 	"time"
 )
 
-var meteringPointId int
-var readingType int
-var reading int
+var record []string
+var meteringPointId, newMeteringPointId int
+var readingType, newReadingType int
+var reading, newReading int
 var createdAt int64
-var totalCost float64
+var totalCost, cost float64
 
 var electricity_1, electricity_2 int
 var gas_1, gas_2 int
@@ -42,7 +43,7 @@ func csvReader() {
 		i += 1
 
 		//reads one (1) line from data file
-		record, err := r.Read()
+		record, err = r.Read()
 
 		//breaks out of loop when EOF has been reached and writes the final reading to file
 		if err == io.EOF {
@@ -58,7 +59,7 @@ func csvReader() {
 
 			// checks if at least 2 lines have been read so that they can be compared
 			if i > 2 {
-				newMeteringPointId, _ := strconv.Atoi(record[0])
+				newMeteringPointId, _ = strconv.Atoi(record[0])
 
 				//checks if new reading is from a new meter ID. If so, writes total cost to file and resets counter
 				if newMeteringPointId != meteringPointId {
@@ -73,15 +74,17 @@ func csvReader() {
 					gas_1 = reading
 				}
 
-				newReading, _ := strconv.Atoi(record[2])
-				newReadingType, _ := strconv.Atoi(record[1])
+				newReading, _ = strconv.Atoi(record[2])
+				newReadingType, _ = strconv.Atoi(record[1])
 
 				if newReadingType == 1 {
 					electricity_2 = newReading
-					totalCost += electricityCost(electricity_2, electricity_1, createdAt)
+					cost, readingSkipped = cost(electricity_2, electricity_1, createdAt, newReadingType)
+					totalCost += cost
 				} else if newReadingType == 2 {
 					gas_2 = newReading
-					totalCost += gasCost(gas_2, gas_1, createdAt)
+					cost, readingSkipped = cost(gas_2, gas_1, createdAt, newReadingType)
+					totalCost += cost
 				}
 
 			}
@@ -97,43 +100,64 @@ func csvReader() {
 }
 
 //returns cost of electricity based on two readings and the time of the (week)day
-func electricityCost(newReading int, oldReading int, createdAt int64) float64 {
+func electricityCost(usage int, createdAt int64) float64 {
 	var cost float64
 
-	usage := float64(newReading - oldReading)
 	kWh := usage / 1000
 
-	//if usage is more than 100 or less than 0, returns basic cost value (0) and skips the reading
-	if usage <= 100 && usage >= 0 {
 		//checks which tarif needs to be used
 		if weekday(createdAt) && rate(createdAt) {
 			cost = kWh * 0.20
 		} else {
 			cost = kWh * 0.18
 		}
-	} else {
-		cost = 0
-	}
 
 	return cost
 }
 
-func gasCost(newReading int, oldReading int, createdAt int64) float64 {
+func gasCost(usage int) float64 {
 	var cost float64
 
-	usage := float64(newReading - oldReading)
 	kWh := usage * 9.769
-
-	if usage <= 100 && usage >= 0 {
-		cost = kWh * 0.06
-	}
+	cost = kWh * 0.06
 
 	return cost
 }
+
+func cost(newReading int, oldReading int, createdAt int64, readingType, int) float64, bool {
+	var cost float64
+	var readingSkipped bool
+	usage := float64(newReading - oldReading)
+	
+	
+	if usage <= 100 && usage >= 0 && readingSkipped == false {
+		if readingType == 1 {
+
+			cost = electricityCost(usage, createdAt)
+
+		} else if readingType == 2 {
+
+			cost = gasCost(usage)
+
+		}
+	} else if readingSkipped && usage >= 0 {
+		if readingType == 1 {
+
+			cost = electricityCost(usage, createdAt)
+
+		} else if readingType == 2 {
+			
+			cost = gasCost(usage)
+		}
+	} else readingSkipped == true
+
+	return cost readingSkipped		
+}
+
 
 //returns true if Unix timestamp is a weekday (mo, tu, we, th, fr)
 func weekday(createdAt int64) bool {
-	var isWeekday bool
+	var isWeekday bool = true
 	day := int(time.Unix(createdAt, 0).Weekday())
 
 	if day == 0 || day == 6 {
@@ -150,8 +174,6 @@ func rate(createdAt int64) bool {
 
 	if hour >= 7 && hour <= 23 {
 		fullRate = true
-	} else {
-		fullRate = false
 	}
 	return fullRate
 }
