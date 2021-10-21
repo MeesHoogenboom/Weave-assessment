@@ -16,7 +16,7 @@ var readingType, newReadingType int
 var reading, newReading int
 var createdAt int64
 var totalCost, price float64
-var readingSkipped bool
+var electricityReadingSkipped, gasReadingSkipped bool
 
 var electricity_1, electricity_2 int
 var gas_1, gas_2 int
@@ -65,39 +65,87 @@ func csvReader() {
 				//checks if new reading is from a new meter ID. If so, writes total cost to file and resets counter
 				if newMeteringPointId != meteringPointId {
 					csvWriter(totalCost, meteringPointId)
+					electricityReadingSkipped, gasReadingSkipped = false, false
 					totalCost = 0
 					i = 2
-				}
-
-				if readingType == 1 {
-					electricity_1 = reading
-				} else if readingType == 2 {
-					gas_1 = reading
 				}
 
 				newReading, _ = strconv.Atoi(record[2])
 				newReadingType, _ = strconv.Atoi(record[1])
 
+				//checks wether the last reading was skipped, if so, retains the previous reading
+				if readingType == 1 && !electricityReadingSkipped {
+					electricity_1 = reading
+				} else if readingType == 2 && !gasReadingSkipped {
+					gas_1 = reading
+				} else {
+					if readingType == 1 {
+						electricity_1 = electricity_2
+					} else if readingType == 2 {
+						gas_1 = gas_2
+					}
+				}
+
+				//calculates cost based upon reading type and adds everything together
 				if newReadingType == 1 {
 					electricity_2 = newReading
-					price, readingSkipped = cost(electricity_2, electricity_1, createdAt, newReadingType)
-					totalCost += price
+					if electricity_1 != 0 {
+						price, electricityReadingSkipped = cost(electricity_2, electricity_1, createdAt, newReadingType, electricityReadingSkipped)
+						totalCost += price
+					}
+					fmt.Printf("Added electricity %f to total cost, current cost is %f \n", price, totalCost)
 				} else if newReadingType == 2 {
 					gas_2 = newReading
-					price, readingSkipped = cost(gas_2, gas_1, createdAt, newReadingType)
-					totalCost += price
+					if gas_1 != 0 {
+						price, gasReadingSkipped = cost(gas_2, gas_1, createdAt, newReadingType, gasReadingSkipped)
+						totalCost += price
+					}
+					fmt.Printf("Added gas %f to total cost, current cost is %f \n", price, totalCost)
 				}
 
 			}
 
 		}
-
+		//set ups 'current variables as previous ones for the next loop'
 		meteringPointId, _ = strconv.Atoi(record[0])
 		readingType, _ = strconv.Atoi(record[1])
 		reading, _ = strconv.Atoi(record[2])
 		createdAt, _ = strconv.ParseInt(record[3], 10, 64)
 
 	}
+}
+
+//validates usage data and calculates the energy cost based on type
+func cost(newReading int, oldReading int, createdAt int64, readingType int, readingSkipped bool) (float64, bool) {
+	var price float64
+	usage := float64(newReading - oldReading)
+	fmt.Printf("Usage is %v - %v = %f. Previous reading skipped? %t \n", newReading, oldReading, usage, readingSkipped)
+
+	if usage <= 100 && usage >= 0 && !readingSkipped {
+		if readingType == 1 {
+
+			price = electricityCost(usage, createdAt)
+
+		} else if readingType == 2 {
+
+			price = gasCost(usage)
+
+		}
+	} else if readingSkipped && usage >= 0 {
+		if readingType == 1 {
+
+			price = electricityCost(usage, createdAt)
+
+		} else if readingType == 2 {
+
+			price = gasCost(usage)
+		}
+	}
+	if price != float64(0) {
+		readingSkipped = false
+	}
+
+	return price, readingSkipped
 }
 
 //returns cost of electricity based on two readings and the time of the (week)day
@@ -123,36 +171,6 @@ func gasCost(usage float64) float64 {
 	cost = kWh * 0.06
 
 	return cost
-}
-
-func cost(newReading int, oldReading int, createdAt int64, readingType int) (float64, bool) {
-	var readingSkipped bool
-	var price float64
-	usage := float64(newReading - oldReading)
-
-	if usage <= 100 && usage >= 0 && !readingSkipped {
-		if readingType == 1 {
-
-			price = electricityCost(usage, createdAt)
-
-		} else if readingType == 2 {
-
-			price = gasCost(usage)
-
-		}
-	} else if readingSkipped && usage >= 0 {
-		if readingType == 1 {
-
-			price = electricityCost(usage, createdAt)
-
-		} else if readingType == 2 {
-
-			price = gasCost(usage)
-		}
-	} else {
-		readingSkipped = true
-	}
-	return price, readingSkipped
 }
 
 //returns true if Unix timestamp is a weekday (mo, tu, we, th, fr)

@@ -23,6 +23,14 @@ func TestWeekday(t *testing.T) {
 	}
 }
 
-func TestCsvWriter(t *testing.T) {
+func TestCost(t *testing.T) {
+	cost, readingSkipped := cost(101, 0, 0, 1)
+	want := float64(0)
 
+	if cost != want {
+		t.Errorf("got %f, wanted %f", cost, want)
+	}
+	if !readingSkipped {
+		t.Errorf("readingSkipped is %t, expected true", readingSkipped)
+	}
 }
