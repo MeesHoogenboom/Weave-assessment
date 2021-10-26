@@ -93,20 +93,18 @@ func csvReader() {
 						price, electricityReadingSkipped = cost(electricity_2, electricity_1, createdAt, newReadingType, electricityReadingSkipped)
 						totalCost += price
 					}
-					fmt.Printf("Added electricity %f to total cost, current cost is %f \n", price, totalCost)
 				} else if newReadingType == 2 {
 					gas_2 = newReading
 					if gas_1 != 0 {
 						price, gasReadingSkipped = cost(gas_2, gas_1, createdAt, newReadingType, gasReadingSkipped)
 						totalCost += price
 					}
-					fmt.Printf("Added gas %f to total cost, current cost is %f \n", price, totalCost)
 				}
 
 			}
 
 		}
-		//set ups 'current variables as previous ones for the next loop'
+		//set ups current variables as previous ones for the next loop
 		meteringPointId, _ = strconv.Atoi(record[0])
 		readingType, _ = strconv.Atoi(record[1])
 		reading, _ = strconv.Atoi(record[2])
@@ -119,8 +117,8 @@ func csvReader() {
 func cost(newReading int, oldReading int, createdAt int64, readingType int, readingSkipped bool) (float64, bool) {
 	var price float64
 	usage := float64(newReading - oldReading)
-	fmt.Printf("Usage is %v - %v = %f. Previous reading skipped? %t \n", newReading, oldReading, usage, readingSkipped)
 
+	//checks wether usage is a correct reading
 	if usage <= 100 && usage >= 0 && !readingSkipped {
 		if readingType == 1 {
 
@@ -131,6 +129,8 @@ func cost(newReading int, oldReading int, createdAt int64, readingType int, read
 			price = gasCost(usage)
 
 		}
+
+		// if last reading was invalid, does away with the criteria that usage has to be less than 100 since the usage now contains 2 time units
 	} else if readingSkipped && usage >= 0 {
 		if readingType == 1 {
 
@@ -148,13 +148,13 @@ func cost(newReading int, oldReading int, createdAt int64, readingType int, read
 	return price, readingSkipped
 }
 
-//returns cost of electricity based on two readings and the time of the (week)day
+//returns cost of electricity based on usage and the time of the (week)day
 func electricityCost(usage float64, createdAt int64) float64 {
 	var cost float64
 
 	kWh := usage / 1000
 
-	//checks which tarif needs to be used
+	//checks which rate needs to be used
 	if weekday(createdAt) && rate(createdAt) {
 		cost = kWh * 0.20
 	} else {
@@ -164,6 +164,7 @@ func electricityCost(usage float64, createdAt int64) float64 {
 	return cost
 }
 
+//returns gas cost
 func gasCost(usage float64) float64 {
 	var cost float64
 
@@ -184,7 +185,7 @@ func weekday(createdAt int64) bool {
 	return isWeekday
 }
 
-//returns true if unix timestamp is during peak hours
+//returns true if unix timestamp is during 'peak' hours
 func rate(createdAt int64) bool {
 	var fullRate bool
 
@@ -205,10 +206,11 @@ func csvWriter(totalCost float64, meteringPointId int) {
 	}
 	defer csvFile.Close()
 
+	// formats output data
 	var id string = strconv.Itoa(meteringPointId)
 	var cost string = strconv.FormatFloat(totalCost, 'f', 2, 64)
-	fmt.Println(id, cost)
 
+	//initializes writer
 	w := csv.NewWriter(csvFile)
 	w.Write([]string{id, cost})
 	w.Flush()
