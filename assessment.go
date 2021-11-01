@@ -70,9 +70,10 @@ func csvReader(fileName string) {
 			if i > 2 {
 				newMeteringPointId, _ = strconv.Atoi(record[0])
 
-				//checks if new reading is from a new meter ID. If so, writes total cost to file and resets counter
+				//checks if new reading is from a new meter ID. If so, writes total cost to file and resets counters
 				if newMeteringPointId != meteringPointId {
 					csvWriter(totalCost, meteringPointId, timestamp)
+
 					electricityReadingSkipped, gasReadingSkipped = false, false
 					totalCost = 0
 					i = 2
