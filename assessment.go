@@ -22,14 +22,20 @@ var electricity_1, electricity_2 int
 var gas_1, gas_2 int
 
 func main() {
-	csvReader()
+	csvReader("data.csv")
 }
 
 // reads csv file line by line
-func csvReader() {
-	csvFile, err := os.Open("data.csv")
+func csvReader(fileName string) {
+	//creates a YYYYMMDDHHMMSS timestamp for the output file
+	timestamp := "output_" + (time.Now().Format("20060102150405")) + ".csv"
+
+	csvFile, err := os.Open(fileName)
+	fmt.Printf("Opened file %v\n", fileName)
+
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	defer csvFile.Close()
@@ -48,11 +54,13 @@ func csvReader() {
 
 		//breaks out of loop when EOF has been reached and writes the final reading to file
 		if err == io.EOF {
-			csvWriter(totalCost, meteringPointId)
+			csvWriter(totalCost, meteringPointId, timestamp)
+			fmt.Println("Done!")
 			break
 		}
 		if err != nil {
 			log.Fatal(err)
+			os.Exit(1)
 		}
 
 		// skips first line (column titles)
@@ -64,7 +72,7 @@ func csvReader() {
 
 				//checks if new reading is from a new meter ID. If so, writes total cost to file and resets counter
 				if newMeteringPointId != meteringPointId {
-					csvWriter(totalCost, meteringPointId)
+					csvWriter(totalCost, meteringPointId, timestamp)
 					electricityReadingSkipped, gasReadingSkipped = false, false
 					totalCost = 0
 					i = 2
@@ -198,20 +206,23 @@ func rate(createdAt int64) bool {
 }
 
 //writes meter ID and total cost associated with that ID to file
-func csvWriter(totalCost float64, meteringPointId int) {
+func csvWriter(totalCost float64, meteringPointId int, timestamp string) {
 	//creates file if none exists, otherwise appends to output file
-	csvFile, err := os.OpenFile("output.csv", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	csvFile, err := os.OpenFile(timestamp, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		fmt.Println(err)
 	}
 	defer csvFile.Close()
 
 	// formats output data
-	var id string = strconv.Itoa(meteringPointId)
-	var cost string = strconv.FormatFloat(totalCost, 'f', 2, 64)
+	id := strconv.Itoa(meteringPointId)
+	cost := strconv.FormatFloat(totalCost, 'f', 2, 64)
+
+	output := []string{id, cost}
 
 	//initializes writer
 	w := csv.NewWriter(csvFile)
-	w.Write([]string{id, cost})
+	w.Write(output)
 	w.Flush()
+	fmt.Println(output)
 }
