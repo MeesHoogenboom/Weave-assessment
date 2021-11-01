@@ -82,7 +82,7 @@ func csvReader(fileName string) {
 				newReading, _ = strconv.Atoi(record[2])
 				newReadingType, _ = strconv.Atoi(record[1])
 
-				//checks wether the last reading was skipped, if so, retains the previous reading
+				//checks wether the last reading was skipped, if so, retains the previous reading. Otherwise assigns the reading to gas or electricity
 				if readingType == 1 && !electricityReadingSkipped {
 					electricity_1 = reading
 				} else if readingType == 2 && !gasReadingSkipped {
